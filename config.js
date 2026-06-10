@@ -43,6 +43,19 @@ window.KEEPSAKE_CONFIG = {
   },
   deadline: "2026-07-01T13:00:00",   // submissions close (local time)
 
+  /* ---- 3b. THE COLLECTION (optional) --------------------
+     A link where colleagues can chip in towards a leaving
+     gift. Paste your Monzo.me (or any payment) link below.
+     Leave `url` blank to hide the contribution section.
+  ---------------------------------------------------------- */
+  gift: {
+    url:   "https://monzo.me/paomorogbe?h=birQhl&account_type=personal",
+    title: "Chip in for Michael's gift",
+    blurb: "Alongside your message, you're warmly invited to contribute towards a leaving gift. Anything you can give is appreciated — there's no expected amount.",
+    cta:   "Contribute via Monzo",
+    note:  "Payments go securely to Precious Omorogbe via Monzo. Contributing is entirely optional."
+  },
+
   /* ---- 4. DEMO MODE PASSWORD ----------------------------
      Only used when Firebase is not configured (preview).
      In a real deployment the real password is in Firebase.
