@@ -823,6 +823,14 @@ window.KEEPSAKE_CONFIG = {
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   function icons() { if (window.lucide) { try { window.lucide.createIcons(); } catch (e) {} } }
+  function logoMark(px) {
+    px = px || 26;
+    return '<svg width="' + px + '" height="' + px + '" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Keepsake" style="flex:none;vertical-align:middle">' +
+      '<rect x="2" y="2" width="60" height="60" rx="16" fill="#005EB8"></rect>' +
+      '<path d="M14 22 L32 33 L50 22" stroke="#FCF9F3" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.55"></path>' +
+      '<path d="M32 47.5c-1 0-9.8-5.3-12.4-9.8a6.6 6.6 0 0 1 11.1-7 1.6 1.6 0 0 0 2.6 0 6.6 6.6 0 0 1 11.1 7C41.8 42.2 33 47.5 32 47.5Z" fill="#E0684B"></path>' +
+      '</svg>';
+  }
   var AV_COLORS = ["#1F3050", "#5B7B9A", "#B0543B", "#E0A43B", "#4F7A5C", "#8F3D29"];
   function avatarColor(name) {
     var n = 0; name = name || "?";
@@ -1329,7 +1337,7 @@ window.KEEPSAKE_CONFIG = {
       html = modeBar() + (state.isAdmin ? adminScreen() : navBar() + '<main class="ks-main">' + loginScreen() + "</main>" + footer());
     } else if (s === "view") {
       html = '<div class="ks-app ks-app--view">' +
-        '<header class="ks-viewbar"><span class="ks-viewbar__brand"><img src="assets/logo-mark.svg" alt="" width="26" height="26"> Keepsake</span></header>' +
+        '<header class="ks-viewbar"><span class="ks-viewbar__brand">' + logoMark(26) + ' Keepsake</span></header>' +
         '<main class="ks-main">' + cardScreen(true) + "</main>" +
         '<footer class="ks-viewfoot"><p>Made with love by the ' + esc(HON.team) + " team.</p></footer></div>";
     } else {
