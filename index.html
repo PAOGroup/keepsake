@@ -552,6 +552,39 @@ img { max-width: 100%; }
 .ks-drop__preview img { border-radius: var(--radius-md); max-height: 220px; width: auto; margin: 0 auto; display: block; }
 .ks-drop__clear { position: absolute; top: 8px; right: 8px; }
 
+/* ---------- attachment tabs (photo / gif) ---------- */
+.ks-attach { border: 1px solid var(--border-default); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface-card); }
+.ks-attach__tabs { display: flex; border-bottom: 1px solid var(--border-subtle); background: var(--surface-sunken); }
+.ks-attach__tab { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  font-family: var(--font-sans); font-weight: 600; font-size: var(--text-sm); color: var(--text-muted);
+  background: transparent; border: 0; padding: 12px; cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast); }
+.ks-attach__tab i { width: 16px; height: 16px; }
+.ks-attach__tab:hover { color: var(--text-strong); }
+.ks-attach__tab.is-active { background: var(--surface-card); color: var(--text-strong); box-shadow: inset 0 -2px 0 var(--accent); }
+.ks-attach__panel { padding: var(--space-5); }
+.ks-attach__panel .ks-drop { background: var(--surface-page); }
+.ks-gifsearch__bar { position: relative; display: flex; align-items: center; }
+.ks-gifsearch__bar i { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--text-muted); pointer-events: none; }
+.ks-gifsearch__bar .ks-input { padding-left: 40px; }
+.ks-gifchips { display: flex; flex-wrap: wrap; gap: 8px; margin: var(--space-4) 0; }
+.ks-gifchip { font-family: var(--font-sans); font-size: var(--text-sm); font-weight: 600; color: var(--text-body);
+  background: var(--surface-sunken); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill);
+  padding: 6px 13px; cursor: pointer; transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast); }
+.ks-gifchip:hover { background: var(--accent-soft); color: var(--accent-text); border-color: var(--gold-200); }
+.ks-gifgrid { display: grid; grid-template-columns: repeat(3, 1fr); grid-auto-rows: 104px; gap: 8px; max-height: 340px; overflow-y: auto; }
+.ks-gifcell { padding: 0; border: 2px solid transparent; border-radius: var(--radius-md); overflow: hidden;
+  cursor: pointer; background: var(--surface-sunken); height: 100%; }
+.ks-gifcell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ks-gifcell:hover { border-color: var(--accent); }
+.ks-gifloading { grid-column: 1 / -1; text-align: center; color: var(--text-muted); font-size: var(--text-sm); padding: var(--space-6); }
+.ks-gifpower { font-size: 11px; color: var(--text-muted); text-align: right; margin: 10px 0 0; letter-spacing: 0.06em; text-transform: uppercase; }
+.ks-gif-selected { text-align: center; }
+.ks-gif-selected img { max-height: 200px; max-width: 100%; border-radius: var(--radius-md); display: block; margin: 0 auto var(--space-3); }
+.ks-gifempty { text-align: center; color: var(--text-muted); padding: var(--space-6) var(--space-4); }
+.ks-gifempty i { width: 26px; height: 26px; display: block; margin: 0 auto 10px; color: var(--text-muted); }
+.ks-gifempty p { margin: 0; line-height: 1.6; font-size: var(--text-sm); }
+.ksmsg__gif { display: block; max-width: 200px; width: 100%; border-radius: var(--radius-md); margin-top: 2px; }
+
 /* ---------- gift / contribution ---------- */
 .ks-gift { display: flex; gap: var(--space-6); align-items: flex-start; background: var(--surface-card);
   border: 1px solid var(--gold-200); border-radius: var(--radius-xl); box-shadow: var(--shadow-md);
@@ -793,6 +826,14 @@ window.KEEPSAKE_CONFIG = {
     note:  "Payments go securely to Precious Omorogbe via Monzo. Contributing is entirely optional."
   },
 
+  /* ---- 3c. GIF LIBRARY (optional) -----------------------
+     Lets people attach a funny GIF to their message instead
+     of a photo. Get a FREE key at developers.giphy.com
+     (Create an App → "API" → copy the API Key) and paste it
+     below. Leave blank to hide the GIF option.
+  ---------------------------------------------------------- */
+  giphyApiKey: "T9pc1omPRmeNZ0cInkbYbOzQy8qJWCPh",
+
   /* ---- 4. DEMO MODE PASSWORD ----------------------------
      Only used when Firebase is not configured (preview).
      In a real deployment the real password is in Firebase.
@@ -813,6 +854,8 @@ window.KEEPSAKE_CONFIG = {
   var CFG = window.KEEPSAKE_CONFIG || {};
   var HON = CFG.honoree || { firstName: "Michael", fullName: "Michael", role: "", team: "" };
   var GIFT = (CFG.gift && CFG.gift.url) ? CFG.gift : null;
+  var GIPHY_KEY = (CFG.giphyApiKey || "").trim();
+  var GIF_CATS = ["Funny", "Crying", "Excited", "Celebration", "Goodbye", "Thank you", "NHS", "Good luck"];
   var LIVE = !!(CFG.firebase && CFG.firebase.apiKey);
 
   /* ---------------- tiny helpers ---------------- */
@@ -899,7 +942,7 @@ window.KEEPSAKE_CONFIG = {
         live: true,
         subscribe: function (cb) { subs.push(cb); cb(cache.slice()); },
         add: function (data) {
-          data.status = "pending"; data.created = Date.now();
+          data.status = "approved"; data.created = Date.now();
           return col.add(data);
         },
         update: function (id, fields) { return col.doc(id).update(fields); },
@@ -920,7 +963,7 @@ window.KEEPSAKE_CONFIG = {
       live: false,
       subscribe: function (cb) { subs.push(cb); cb(cache.slice()); },
       add: function (data) {
-        data.id = uid(); data.status = "pending"; data.created = Date.now();
+        data.id = uid(); data.status = "approved"; data.created = Date.now();
         cache.unshift(data); save(); notify(); return Promise.resolve();
       },
       update: function (id, fields) {
@@ -1027,7 +1070,7 @@ window.KEEPSAKE_CONFIG = {
   }
 
   /* ---------------- derived ---------------- */
-  function cardMessages() { return state.messages.filter(function (m) { return m.status === "approved" && m.show !== false; }); }
+  function cardMessages() { return state.messages.filter(function (m) { return m.status !== "hidden" && m.show !== false; }); }
 
   /* ============================================================
      SCREENS
@@ -1138,7 +1181,7 @@ window.KEEPSAKE_CONFIG = {
   }
 
   /* ---------------- submit ---------------- */
-  var formState = { name: "", team: "", message: "", show: true, photo: null };
+  var formState = { name: "", team: "", message: "", show: true, photo: null, gif: null, attachTab: "photo" };
   function submitScreen() {
     if (isClosed()) {
       return wrapNarrow(
@@ -1156,8 +1199,15 @@ window.KEEPSAKE_CONFIG = {
         field("Leaving message", "*",
           '<textarea class="ks-textarea" id="f-message" maxlength="600" placeholder="What would you like to say to ' + esc(HON.firstName) + '?">' + esc(formState.message) + "</textarea>" +
           '<div class="ks-field__count" id="f-count">0 / 600</div>', "e-message") +
-        '<div class="ks-field"><span class="ks-field__label">Photo <span class="ks-field__opt">Optional</span></span>' +
-          '<div id="dropZone">' + dropInner() + "</div></div>" +
+        '<div class="ks-field"><span class="ks-field__label">Add a photo or GIF <span class="ks-field__opt">Optional</span></span>' +
+          '<div class="ks-attach" id="attach">' +
+            '<div class="ks-attach__tabs" role="tablist">' +
+              '<button type="button" class="ks-attach__tab' + (formState.attachTab !== "gif" ? " is-active" : "") + '" data-tab="photo"><i data-lucide="image-plus"></i> Photo</button>' +
+              '<button type="button" class="ks-attach__tab' + (formState.attachTab === "gif" ? " is-active" : "") + '" data-tab="gif"><i data-lucide="clapperboard"></i> GIF</button>' +
+            "</div>" +
+            '<div class="ks-attach__panel" data-panel="photo"' + (formState.attachTab === "gif" ? " hidden" : "") + '><div id="dropZone">' + dropInner() + "</div></div>" +
+            '<div class="ks-attach__panel" data-panel="gif"' + (formState.attachTab !== "gif" ? " hidden" : "") + ' id="gifPanel">' + gifPanel() + "</div>" +
+          "</div></div>" +
         '<label class="ks-check"><input type="checkbox" id="f-show" ' + (formState.show ? "checked" : "") + ">" +
           '<span><span class="ks-check__t">Show my message on ' + esc(HON.firstName) + "'s final card</span>" +
           '<br><span class="ks-check__d">If unchecked, only the organiser will see it.</span></span></label>' +
@@ -1177,12 +1227,31 @@ window.KEEPSAKE_CONFIG = {
       '<p class="ks-drop__hint">Tap to choose a photo, or drag one here</p>' +
       '<input type="file" accept="image/*" id="f-photo" hidden></label>';
   }
+  function gifPanel() {
+    if (!GIPHY_KEY) {
+      return '<div class="ks-gifempty"><i data-lucide="clapperboard"></i>' +
+        "<p>The GIF library isn't switched on yet.<br>Add a free GIPHY key in <b>config.js</b> to turn it on (see SETUP).</p></div>";
+    }
+    if (formState.gif) {
+      return '<div class="ks-gif-selected"><img src="' + esc(formState.gif) + '" alt="Selected GIF">' +
+        '<button type="button" class="btn btn--outline btn--sm" id="gifClear"><i data-lucide="x"></i> Remove GIF</button></div>';
+    }
+    return '<div class="ks-gifsearch">' +
+      '<div class="ks-gifsearch__bar"><i data-lucide="search"></i>' +
+        '<input class="ks-input" id="gifQuery" placeholder="Search GIFs\u2026 e.g. funny, crying, excited">' +
+      "</div>" +
+      '<div class="ks-gifchips">' + GIF_CATS.map(function (c) {
+        return '<button type="button" class="ks-gifchip" data-q="' + esc(c) + '">' + esc(c) + "</button>";
+      }).join("") + "</div>" +
+      '<div class="ks-gifgrid" id="gifGrid"></div>' +
+      '<p class="ks-gifpower">Powered by GIPHY</p></div>';
+  }
   function successScreen(name) {
     return wrapNarrow(
       '<div class="ks-success"><div class="ks-success__icon"><i data-lucide="check"></i></div>' +
         "<h1 class=\"ks-success__title\">Thank you, " + esc(name) + "!</h1>" +
-        '<p class="ks-success__sub">Your message has been added to ' + esc(HON.firstName) +
-          "'s card. It will appear once the organiser approves it.</p>" +
+        '<p class="ks-success__sub">Your message is now on ' + esc(HON.firstName) +
+          "'s card for everyone to see. Thank you for adding to it.</p>" +
         '<div class="ks-success__actions">' +
           '<a class="btn btn--accent btn--lg" href="#card"><i data-lucide="book-heart"></i> See the card</a>' +
           '<button class="btn btn--outline btn--lg" id="addAnother">Add another</button>' +
@@ -1232,7 +1301,9 @@ window.KEEPSAKE_CONFIG = {
       '<div class="ksmsg__pad"><header class="ksmsg__head">' + avatar(m.name, null) +
         '<div class="ksmsg__who"><span class="ksmsg__name">' + esc(m.name) + "</span>" +
         (m.team ? '<span class="ks-badge ks-badge--blue">' + esc(m.team) + "</span>" : "") + "</div></header>" +
-        '<p class="ksmsg__body">' + body + "</p></div></article>";
+        '<p class="ksmsg__body">' + body + "</p>" +
+        (m.gif ? '<img class="ksmsg__gif" src="' + esc(m.gif) + '" alt="GIF from ' + esc(m.name) + '" loading="lazy">' : "") +
+        "</div></article>";
   }
 
   /* ---------------- admin ---------------- */
@@ -1252,13 +1323,13 @@ window.KEEPSAKE_CONFIG = {
   }
 
   function adminScreen() {
-    var pending = state.messages.filter(function (m) { return m.status === "pending"; });
-    var approved = state.messages.filter(function (m) { return m.status === "approved"; });
+    var live = state.messages.filter(function (m) { return m.status !== "hidden"; });
+    var hidden = state.messages.filter(function (m) { return m.status === "hidden"; });
     var tab = state.adminTab;
     var side = '<aside class="ks-admin__side">' +
       '<div class="ks-admin__brand"><img src="data:image/svg+xml,%3Csvg%20width%3D%2264%22%20height%3D%2264%22%20viewBox%3D%220%200%2064%2064%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20role%3D%22img%22%20aria-label%3D%22Keepsake%22%3E%0A%20%20%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2260%22%20height%3D%2260%22%20rx%3D%2216%22%20fill%3D%22%23005EB8%22%3E%3C%2Frect%3E%0A%20%20%3Cpath%20d%3D%22M14%2022%20L32%2033%20L50%2022%22%20stroke%3D%22%23FCF9F3%22%20stroke-width%3D%223.2%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20fill%3D%22none%22%20opacity%3D%220.55%22%3E%3C%2Fpath%3E%0A%20%20%3Cpath%20d%3D%22M32%2047.5c-1%200-9.8-5.3-12.4-9.8a6.6%206.6%200%200%201%2011.1-7%201.6%201.6%200%200%200%202.6%200%206.6%206.6%200%200%201%2011.1%207C41.8%2042.2%2033%2047.5%2032%2047.5Z%22%20fill%3D%22%23E0684B%22%3E%3C%2Fpath%3E%0A%3C%2Fsvg%3E" alt="" width="30" height="30"><div><b>Keepsake</b><span>Organiser</span></div></div>' +
       '<nav class="ks-admin__nav">' +
-        '<button data-tab="submissions" class="' + (tab === "submissions" ? "is-active" : "") + '"><i data-lucide="inbox"></i> Submissions' + (pending.length ? '<span class="ks-admin__count">' + pending.length + "</span>" : "") + "</button>" +
+        '<button data-tab="submissions" class="' + (tab === "submissions" ? "is-active" : "") + '"><i data-lucide="inbox"></i> Messages' + (live.length ? '<span class="ks-admin__count">' + live.length + "</span>" : "") + "</button>" +
         '<button data-tab="settings" class="' + (tab === "settings" ? "is-active" : "") + '"><i data-lucide="settings"></i> Settings</button>' +
       "</nav>" +
       '<div class="ks-admin__user">' + avatar(orgName(), null, true) +
@@ -1282,16 +1353,17 @@ window.KEEPSAKE_CONFIG = {
                 : '<b style="color:var(--accent-text)">● Demo</b> — saving to this browser only. Add Firebase keys in config.js to go live.') +
         "</p></div></div>";
     } else {
-      main = '<div><div class="ks-admin__head"><div><h1 class="ks-admin__title">Submissions</h1>' +
-        '<p class="ks-admin__lede">' + approved.length + " on the card · " + pending.length + " awaiting review</p></div>" +
+      main = '<div><div class="ks-admin__head"><div><h1 class="ks-admin__title">Messages</h1>' +
+        '<p class="ks-admin__lede">' + live.length + " on the card" + (hidden.length ? " · " + hidden.length + " hidden" : "") + ". Messages publish automatically — hide or remove any you need to.</p></div>" +
         '<a class="btn btn--primary" href="#card" target="_blank"><i data-lucide="external-link"></i> View the card</a></div>';
-      if (pending.length) {
-        main += '<div class="ks-admin__group"><h2 class="ks-admin__grouptitle"><span class="ks-badge ks-badge--gold">Awaiting review</span></h2>' +
-          pending.map(function (m) { return adminRow(m, false); }).join("") + "</div>";
-      }
       main += '<div class="ks-admin__group"><h2 class="ks-admin__grouptitle"><span class="ks-badge ks-badge--success">On the card</span></h2>' +
-        (approved.length ? approved.map(function (m) { return adminRow(m, true); }).join("")
-          : '<div class="ks-empty"><i data-lucide="inbox"></i><p>Nothing approved yet.</p></div>') + "</div></div>";
+        (live.length ? live.map(function (m) { return adminRow(m, true); }).join("")
+          : '<div class="ks-empty"><i data-lucide="inbox"></i><p>No messages yet.</p></div>') + "</div>";
+      if (hidden.length) {
+        main += '<div class="ks-admin__group"><h2 class="ks-admin__grouptitle"><span class="ks-badge ks-badge--neutral">Hidden</span></h2>' +
+          hidden.map(function (m) { return adminRow(m, false); }).join("") + "</div>";
+      }
+      main += "</div>";
     }
     return '<div class="ks-admin">' + side + '<main class="ks-admin__main">' + main + "</main></div>" +
       '<div class="ks-floatback"><a class="btn btn--outline" href="#home"><i data-lucide="arrow-left"></i> Exit</a></div>';
@@ -1307,8 +1379,8 @@ window.KEEPSAKE_CONFIG = {
       '</div><p class="ks-arow__msg">' + esc(m.message) + "</p></div>" +
       '<div class="ks-arow__actions">' +
         (approved
-          ? '<button class="ks-arow__btn" data-act="hide" data-id="' + esc(m.id) + '"><i data-lucide="eye-off"></i> Unpublish</button>'
-          : '<button class="ks-arow__btn ks-arow__btn--ok" data-act="approve" data-id="' + esc(m.id) + '"><i data-lucide="check"></i> Approve</button>') +
+          ? '<button class="ks-arow__btn" data-act="hide" data-id="' + esc(m.id) + '"><i data-lucide="eye-off"></i> Hide</button>'
+          : '<button class="ks-arow__btn ks-arow__btn--ok" data-act="approve" data-id="' + esc(m.id) + '"><i data-lucide="eye"></i> Show</button>') +
         '<button class="ks-arow__btn ks-arow__btn--danger" data-act="remove" data-id="' + esc(m.id) + '"><i data-lucide="trash-2"></i></button>' +
       "</div></div>";
   }
@@ -1370,6 +1442,7 @@ window.KEEPSAKE_CONFIG = {
     if (showI) showI.addEventListener("change", function () { formState.show = showI.checked; });
 
     bindDrop();
+    wireAttach();
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
@@ -1383,10 +1456,10 @@ window.KEEPSAKE_CONFIG = {
       if (!ok) return;
       var btn = document.getElementById("f-submit");
       btn.disabled = true; btn.innerHTML = '<i data-lucide="loader"></i> Sending…'; icons();
-      store.add({ name: name, team: teamI.value.trim(), message: message, show: showI.checked, photo: formState.photo || null })
+      store.add({ name: name, team: teamI.value.trim(), message: message, show: showI.checked, photo: formState.photo || null, gif: formState.gif || null })
         .then(function () {
           var first = name.split(" ")[0];
-          formState = { name: "", team: "", message: "", show: true, photo: null };
+          formState = { name: "", team: "", message: "", show: true, photo: null, gif: null, attachTab: "photo" };
           app.querySelector(".ks-main").innerHTML = successScreen(first);
           requestAnimationFrame(icons);
           var aa = document.getElementById("addAnother");
@@ -1408,7 +1481,7 @@ window.KEEPSAKE_CONFIG = {
     function handleFile(file) {
       if (!file) return;
       compressImage(file).then(function (data) {
-        formState.photo = data; zone.innerHTML = dropInner(); requestAnimationFrame(icons); bindDrop();
+        formState.photo = data; formState.gif = null; zone.innerHTML = dropInner(); requestAnimationFrame(icons); bindDrop();
       }).catch(function () { toast("That image couldn't be read."); });
     }
     if (input) input.addEventListener("change", function () { handleFile(input.files[0]); });
@@ -1418,6 +1491,88 @@ window.KEEPSAKE_CONFIG = {
       ["dragleave", "drop"].forEach(function (ev) { label.addEventListener(ev, function (e) { e.preventDefault(); label.classList.remove("is-over"); }); });
       label.addEventListener("drop", function (e) { if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
     }
+  }
+
+  /* ---------------- GIF picker (GIPHY) ---------------- */
+  var gifDebounce;
+  function wireAttach() {
+    var attach = document.getElementById("attach");
+    if (!attach) return;
+    [].forEach.call(attach.querySelectorAll(".ks-attach__tab"), function (tab) {
+      tab.addEventListener("click", function () {
+        var which = tab.getAttribute("data-tab");
+        formState.attachTab = which;
+        [].forEach.call(attach.querySelectorAll(".ks-attach__tab"), function (t) {
+          t.classList.toggle("is-active", t.getAttribute("data-tab") === which);
+        });
+        [].forEach.call(attach.querySelectorAll(".ks-attach__panel"), function (p) {
+          p.hidden = p.getAttribute("data-panel") !== which;
+        });
+        if (which === "gif") wireGif();
+      });
+    });
+    if (formState.attachTab === "gif") wireGif();
+  }
+
+  function wireGif() {
+    var panel = document.getElementById("gifPanel");
+    if (!panel) return;
+    var clear = document.getElementById("gifClear");
+    if (clear) {
+      clear.addEventListener("click", function () {
+        formState.gif = null; panel.innerHTML = gifPanel(); requestAnimationFrame(icons); wireGif();
+      });
+      return;
+    }
+    var grid = document.getElementById("gifGrid");
+    var query = document.getElementById("gifQuery");
+    if (!grid) return;
+    if (query) {
+      query.addEventListener("input", function () {
+        clearTimeout(gifDebounce);
+        var q = query.value.trim();
+        gifDebounce = setTimeout(function () { loadGifs(q); }, 350);
+      });
+    }
+    [].forEach.call(panel.querySelectorAll(".ks-gifchip"), function (chip) {
+      chip.addEventListener("click", function () {
+        var q = chip.getAttribute("data-q");
+        if (query) query.value = q;
+        loadGifs(q);
+      });
+    });
+    grid.addEventListener("click", function (e) {
+      var cell = e.target.closest && e.target.closest(".ks-gifcell");
+      if (!cell) return;
+      formState.gif = cell.getAttribute("data-url");
+      formState.photo = null;
+      panel.innerHTML = gifPanel(); requestAnimationFrame(icons); wireGif();
+    });
+    loadGifs("");
+  }
+
+  function loadGifs(q) {
+    var grid = document.getElementById("gifGrid");
+    if (!grid) return;
+    grid.innerHTML = '<div class="ks-gifloading">Loading\u2026</div>';
+    var base = "https://api.giphy.com/v1/gifs/";
+    var common = "api_key=" + encodeURIComponent(GIPHY_KEY) + "&limit=24&rating=pg&bundle=messaging_non_clips";
+    var url = q ? base + "search?" + common + "&q=" + encodeURIComponent(q) : base + "trending?" + common;
+    fetch(url).then(function (r) { return r.json(); }).then(function (j) {
+      if (!grid.isConnected) return;
+      var items = (j && j.data) || [];
+      if (!items.length) { grid.innerHTML = '<div class="ks-gifloading">No GIFs found \u2014 try another word.</div>'; return; }
+      grid.innerHTML = items.map(function (g) {
+        var im = g.images || {};
+        var thumb = im.fixed_width_small || im.fixed_width || im.downsized;
+        var full = im.fixed_width || im.downsized || im.original;
+        if (!thumb || !full) return "";
+        return '<button type="button" class="ks-gifcell" data-url="' + esc(full.url) + '">' +
+          '<img src="' + esc(thumb.url) + '" alt="' + esc(g.title || "GIF") + '" loading="lazy"></button>';
+      }).join("");
+    }).catch(function () {
+      if (grid.isConnected) grid.innerHTML = '<div class="ks-gifloading">Couldn\'t load GIFs \u2014 check the connection or the GIPHY key.</div>';
+    });
   }
 
   function wireLogin() {
@@ -1460,8 +1615,8 @@ window.KEEPSAKE_CONFIG = {
     [].forEach.call(document.querySelectorAll(".ks-arow__btn[data-act]"), function (b) {
       b.addEventListener("click", function () {
         var id = b.getAttribute("data-id"), act = b.getAttribute("data-act");
-        if (act === "approve") store.update(id, { status: "approved" }).then(function () { toast("Message approved"); });
-        else if (act === "hide") store.update(id, { status: "pending" }).then(function () { toast("Moved to pending"); });
+        if (act === "approve") store.update(id, { status: "approved" }).then(function () { toast("Back on the card"); });
+        else if (act === "hide") store.update(id, { status: "hidden" }).then(function () { toast("Hidden from the card"); });
         else if (act === "remove") { if (confirm("Remove this message permanently?")) store.remove(id).then(function () { toast("Message removed"); }); }
       });
     });
